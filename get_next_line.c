@@ -24,58 +24,63 @@
 // 		i++;
 // 	}
 // }
-//allocate new memory to fit new read bytes
-// char	*extend_and_copy(char **tobuild, int builded_len, int read_bytes)
-// {
-// 	char	*newstr;
-// 	int		i;
 
-// 	i = 0;
-// 	newstr = malloc (builded_len + len);
-// 	if (*tobuild != NULL)
-// 	{
-// 		i = 0;
-// 		while (i < builded_len)
-// 		{
-// 			newstr[i] = *tobuild[i];
-// 			i++;
-// 		}
-// 	}
-// 	free(*tobuild);
-// 	return (newstr);
-// }
-int	build_line(char **tobuild, char *str, int len)
+//allocate new memory to fit new read bytes
+void	extend_and_copy(char **tobuild, int builded_len, int read_bytes)
 {
-	static int	builded_len = 0;
 	char	*newstr;
 	int		i;
 
-	newstr = malloc (builded_len + len);
+	i = 0;
+	newstr = malloc (builded_len + read_bytes);
 	if (*tobuild != NULL)
 	{
-		i = 0;
 		while (i < builded_len)
 		{
-			newstr[i] = *tobuild[i];
+			newstr[i] = (*tobuild)[i];
 			i++;
 		}
+		free(*tobuild);
 	}
-	free(*tobuild);
 	*tobuild = newstr;
-	i = 0;
-	while (i < len)
+}
+void	stash_str(char **remaining_str, char *buffer, int reached_i, int read_bytes)
+{
+	char	*newstr;
+	int		j;
+
+	newstr = malloc(read_bytes - reached_i - 1);
+	j = 0;
+	while ((reached_i + j) < read_bytes)
 	{
-		newstr[builded_len + i] = str[i];
-		if (str[i] == '\n')
+		newstr[j] = buffer[reached_i + j];
+		j++;
+	}
+	// free(*remaining_str);
+	*remaining_str = newstr;
+	printf("remainings: %s", *remaining_str);
+}
+int	build_line(char **tobuild, char *buffer, int read_bytes, char **remaining_str)
+{
+	static int	builded_len = 0;
+	int		i;
+	
+	extend_and_copy(tobuild, builded_len, read_bytes);
+	i = 0;
+	while (i < read_bytes)
+	{
+		(*tobuild)[builded_len + i] = buffer[i];
+		if (buffer[i] == '\n')
 		{
-			builded_len += len;
+			if ((i + 1) < read_bytes)
+				stash_str(remaining_str, buffer, (i + 1), read_bytes);
 			builded_len = 0;
 			return (1);
 		}
 		i++;
 	}
-	builded_len += len;
-	if (len < BUFFER_SIZE)
+	builded_len += read_bytes;
+	if (read_bytes < BUFFER_SIZE)
 	{
 		builded_len = 0;
 		return (1);
@@ -86,16 +91,22 @@ char	*get_next_line(int fd)
 {
 	int		read_bytes;
 	char	buffer[BUFFER_SIZE];
+	static	char	*remaining_str = NULL;
 	char	*next_line;
 	
 	read_bytes = read(fd, buffer, BUFFER_SIZE);
 	next_line = NULL;
-	printf("read bytes: %i", read_bytes);
+	// printf("read bytes: %i", read_bytes);
 	while (read_bytes != 0)
 	{
-		if (build_line(&next_line, buffer, read_bytes))
+		if (build_line(&next_line, buffer, read_bytes, &remaining_str))
 			return (next_line);
 		read_bytes = read(fd, buffer, BUFFER_SIZE);
+	}
+	if (remaining_str != NULL)
+	{
+		next_line = remaining_str;
+		remaining_str = NULL;
 	}
 	return (next_line);
 }
@@ -113,6 +124,7 @@ int main()
 	{
 		printf("%s", next_line);
 		free(next_line);
+		next_line = NULL;
 		next_line = get_next_line(fd);
 	}
 	// printf("%s", "hello\n new line\n");
