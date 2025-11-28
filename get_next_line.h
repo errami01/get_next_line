@@ -16,8 +16,15 @@
 # include <stdlib.h>
 
 char	*get_next_line(int fd);
+int		ft_strlen(char *str);
+void	extend_and_copy(char **tobuild, int builded_len, int read_bytes,
+			char **remaining_str);
+void	stash_str(char **remaining_str, char *buffer, int reached_i,
+			int read_bytes);
+int		build_line(char **tobuild, char *buffer, int read_bytes,
+			char **remaining_str);
 
-#endif
-#ifndef BUFFER_SIZE
-# define BUFFER_SIZE 42
+# ifndef BUFFER_SIZE
+#  define BUFFER_SIZE 42
+# endif
 #endif
